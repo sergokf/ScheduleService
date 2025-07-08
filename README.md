@@ -232,37 +232,6 @@ alembic downgrade -1
 - ✅ **CORS настройки** для фронтенда
 - ✅ **Обработка ошибок** с понятными сообщениями
 
-### Kubernetes
-
-Для деплоя в Kubernetes создайте:
-```yaml
-# deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: schedule-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: schedule-api
-  template:
-    metadata:
-      labels:
-        app: schedule-api
-    spec:
-      containers:
-      - name: api
-        image: schedule-microservice:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: db-secret
-              key: url
-```
 
 ## 🤝 Разработка
 
@@ -282,13 +251,6 @@ schedule_microservice/
 └── requirements.txt       # Python зависимости
 ```
 
-### Соглашения
-
-- **Типизация** - полное покрытие типами
-- **Документация** - docstrings для всех публичных методов
-- **Тестирование** - покрытие критического функционала
-- **Git** - conventional commits
-
 ### Расширение функциональности
 
 Для добавления новых endpoints:
@@ -299,20 +261,3 @@ schedule_microservice/
 4. Создайте router в `app/api/v1/endpoints/`
 5. Подключите в `app/api/v1/router.py`
 6. Добавьте тесты в `tests/`
-
-## 📄 Лицензия
-
-MIT License - детали в файле LICENSE.
-
-## 🆘 Поддержка
-
-При возникновении проблем:
-
-1. Проверьте логи: `docker-compose logs -f`
-2. Убедитесь в корректности .env файла
-3. Проверьте health endpoint: `/health`
-4. Создайте issue с описанием проблемы
-
----
-
-**Проект готов к использованию в production окружении! 🎉**
