@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
     API_V1_STR: str = "/api/v1"
+    SERVER_URL: str = "https://176.108.252.210:8443"
 
     # Security settings
     SECRET_KEY: str = "your-secret-key-here-change-in-production"

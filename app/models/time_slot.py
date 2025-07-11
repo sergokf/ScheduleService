@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from enum import Enum
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -26,6 +26,7 @@ class TimeSlot(BaseModel, table=True):
     status: SlotStatus = Field(default=SlotStatus.AVAILABLE)
     description: Optional[str] = Field(default=None, max_length=500)
     price: Optional[float] = Field(default=None, ge=0)
+    meeting_url: Optional[str] = Field(default=None, max_length=500)  # ссылка на встречу
 
     # Связи
     teacher: "Teacher" = Relationship(back_populates="time_slots")
@@ -44,3 +45,7 @@ class TimeSlot(BaseModel, table=True):
     def is_full(self) -> bool:
         """Проверка заполненности слота"""
         return self.current_bookings >= self.max_students
+
+if TYPE_CHECKING:
+    from app.models.teacher import Teacher
+    from app.models.booking import Booking

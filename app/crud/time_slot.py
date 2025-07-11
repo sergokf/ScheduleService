@@ -8,6 +8,8 @@ from datetime import datetime, time, timedelta, timezone
 from sqlalchemy import select, and_, or_, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+import uuid
+from app.core.config import get_settings
 
 from app.crud.base import CRUDBase
 from app.models.time_slot import TimeSlot, SlotStatus
@@ -96,6 +98,27 @@ class CRUDTimeSlot(CRUDBase[TimeSlot, TimeSlotCreate, TimeSlotUpdate]):
             raise SlotOverlapException("Slot overlaps with existing slot")
 
         return await self.create(db, obj_in)
+
+    async def create(
+        self,
+        db: AsyncSession,
+        obj_in: TimeSlotCreate
+    ) -> TimeSlot:
+        settings = get_settings()
+        unique_name = str(uuid.uuid4())
+        meeting_url = f"{settings.SERVER_URL}/{unique_name}"
+        # Привести start_time и end_time к naive UTC
+        start_time = to_naive_utc(obj_in.start_time)
+        end_time = to_naive_utc(obj_in.end_time)
+        data = obj_in.model_dump()
+        data["start_time"] = start_time
+        data["end_time"] = end_time
+        data["meeting_url"] = meeting_url
+        db_obj = self.model(**data)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
 
     async def create_bulk_slots(
         self, 

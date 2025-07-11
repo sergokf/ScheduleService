@@ -1,9 +1,15 @@
 from datetime import datetime, timezone
 from typing import Optional, List, Annotated
-from pydantic import BaseModel, Field, validator, conlist
+from pydantic import BaseModel, Field, validator, conlist, field_validator
 
 from app.models.time_slot import SlotStatus
 from app.schemas.base import BaseResponse
+
+
+def to_naive_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt.replace(tzinfo=None)
 
 
 class TimeSlotBase(BaseModel):
@@ -15,17 +21,29 @@ class TimeSlotBase(BaseModel):
     description: Optional[str] = Field(default=None, max_length=500)
     price: Optional[float] = Field(default=None, ge=0)
 
-    @validator('end_time')
-    def validate_end_time(cls, v, values):
-        if 'start_time' in values and v <= values['start_time']:
-            raise ValueError('End time must be after start time')
+    @field_validator('start_time', 'end_time', mode='before')
+    @classmethod
+    def to_naive_utc_validator(cls, v):
+        if isinstance(v, datetime):
+            return to_naive_utc(v)
         return v
 
-    @validator('start_time')
+    @field_validator('end_time')
+    @classmethod
+    def validate_end_time(cls, v, values):
+        v = to_naive_utc(v)
+        start_time = values.data.get('start_time')
+        if start_time is not None:
+            start_time = to_naive_utc(start_time)
+            if v <= start_time:
+                raise ValueError('End time must be after start time')
+        return v
+
+    @field_validator('start_time')
+    @classmethod
     def validate_start_time(cls, v):
-        now = datetime.now(timezone.utc)
-        if v.tzinfo is None:
-            v = v.replace(tzinfo=timezone.utc)
+        v = to_naive_utc(v)
+        now = to_naive_utc(datetime.now(timezone.utc))
         if v < now:
             raise ValueError('Start time cannot be in the past')
         return v
@@ -64,6 +82,7 @@ class TimeSlotResponse(BaseResponse):
     price: Optional[float]
     is_available: bool
     is_full: bool
+    meeting_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -73,6 +92,7 @@ class TimeSlotWithDetails(TimeSlotResponse):
     """Схема временного слота с деталями"""
     teacher: "TeacherResponse"
     bookings: List["BookingResponse"] = []
+    meeting_url: Optional[str] = None
 
     class Config:
         from_attributes = True

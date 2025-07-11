@@ -82,6 +82,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """Обновить объект"""
         obj_data = obj_in.dict(exclude_unset=True)
         for field, value in obj_data.items():
+            # Приводим datetime к naive UTC только для datetime
+            if isinstance(value, datetime):
+                if value.tzinfo is not None:
+                    value = value.astimezone(timezone.utc).replace(tzinfo=None)
+                else:
+                    value = value.replace(tzinfo=None)
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
 
