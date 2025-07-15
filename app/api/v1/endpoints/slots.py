@@ -81,19 +81,6 @@ async def create_slot(
         raise HTTPException(status_code=409, detail=str(e))
 
 
-@router.post("/bulk", response_model=List[TimeSlotResponse])
-async def create_bulk_slots(
-    bulk_data: BulkSlotCreate,
-    db: AsyncSession = Depends(get_db)
-):
-    """Массовое создание слотов"""
-    try:
-        slots = await time_slot.create_bulk_slots(db, bulk_data)
-        return slots
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.put("/{slot_id}", response_model=TimeSlotResponse)
 async def update_slot(
     slot_id: int,

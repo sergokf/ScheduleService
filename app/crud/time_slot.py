@@ -15,6 +15,7 @@ from app.crud.base import CRUDBase
 from app.models.time_slot import TimeSlot, SlotStatus
 from app.schemas.time_slot import TimeSlotCreate, TimeSlotUpdate, BulkSlotCreate
 from app.core.exceptions import SlotOverlapException, SlotNotFoundException
+from app.models.teacher import Teacher
 
 
 def to_naive_utc(dt: datetime) -> datetime:
@@ -105,8 +106,26 @@ class CRUDTimeSlot(CRUDBase[TimeSlot, TimeSlotCreate, TimeSlotUpdate]):
         obj_in: TimeSlotCreate
     ) -> TimeSlot:
         settings = get_settings()
-        unique_name = str(uuid.uuid4())
-        meeting_url = f"{settings.SERVER_URL}/{unique_name}"
+        # Получаем e-mail преподавателя
+        teacher_query = select(Teacher).where(Teacher.id == obj_in.teacher_id)
+        teacher_result = await db.execute(teacher_query)
+        teacher = teacher_result.scalar_one_or_none()
+        if not teacher:
+            raise Exception("Teacher not found")
+        base = teacher.email.split('@')[0]
+        # Получаем все существующие ссылки с этим base
+        url_query = select(TimeSlot.meeting_url).where(TimeSlot.meeting_url.like(f"%/{base}-%"))
+        url_result = await db.execute(url_query)
+        existing_urls = [row[0] for row in url_result.fetchall() if row[0]]
+        numbers = []
+        for url in existing_urls:
+            try:
+                num = int(url.rsplit('-', 1)[-1])
+                numbers.append(num)
+            except Exception:
+                continue
+        next_num = max(numbers, default=0) + 1
+        meeting_url = f"{settings.SERVER_URL}/{base}-{next_num}"
         # Привести start_time и end_time к naive UTC
         start_time = to_naive_utc(obj_in.start_time)
         end_time = to_naive_utc(obj_in.end_time)
@@ -119,52 +138,6 @@ class CRUDTimeSlot(CRUDBase[TimeSlot, TimeSlotCreate, TimeSlotUpdate]):
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
-
-    async def create_bulk_slots(
-        self, 
-        db: AsyncSession, 
-        bulk_data: BulkSlotCreate
-    ) -> List[TimeSlot]:
-        """Массовое создание слотов"""
-        slots_to_create = []
-        current_date = bulk_data.start_date.date()
-        end_date = bulk_data.end_date.date()
-
-        # Парсим время
-        start_time = datetime.strptime(bulk_data.start_time, "%H:%M").time()
-        end_time = datetime.strptime(bulk_data.end_time, "%H:%M").time()
-
-        while current_date <= end_date:
-            # Проверяем, что это нужный день недели
-            if current_date.weekday() in bulk_data.days_of_week:
-                slot_start = datetime.combine(current_date, start_time)
-                slot_end = datetime.combine(current_date, end_time)
-
-                # Проверяем пересечение
-                has_overlap = await self.check_slot_overlap(
-                    db, bulk_data.teacher_id, slot_start, slot_end
-                )
-
-                if not has_overlap:
-                    slot_data = TimeSlotCreate(
-                        teacher_id=bulk_data.teacher_id,
-                        start_time=slot_start,
-                        end_time=slot_end,
-                        max_students=bulk_data.max_students,
-                        description=bulk_data.description,
-                        price=bulk_data.price
-                    )
-                    slots_to_create.append(slot_data)
-
-            current_date += timedelta(days=1)
-
-        # Создаем слоты
-        created_slots = []
-        for slot_data in slots_to_create:
-            slot = await self.create(db, slot_data)
-            created_slots.append(slot)
-
-        return created_slots
 
     async def book_slot(
         self, 
