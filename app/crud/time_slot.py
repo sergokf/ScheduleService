@@ -106,13 +106,15 @@ class CRUDTimeSlot(CRUDBase[TimeSlot, TimeSlotCreate, TimeSlotUpdate]):
         obj_in: TimeSlotCreate
     ) -> TimeSlot:
         settings = get_settings()
-        # Получаем e-mail преподавателя
+        # Получаем slug преподавателя
         teacher_query = select(Teacher).where(Teacher.id == obj_in.teacher_id)
         teacher_result = await db.execute(teacher_query)
         teacher = teacher_result.scalar_one_or_none()
         if not teacher:
             raise Exception("Teacher not found")
-        base = teacher.email.split('@')[0]
+        if not teacher.slug:
+            raise Exception("Teacher slug is required for meeting_url generation")
+        base = teacher.slug
         # Получаем все существующие ссылки с этим base
         url_query = select(TimeSlot.meeting_url).where(TimeSlot.meeting_url.like(f"%/{base}-%"))
         url_result = await db.execute(url_query)

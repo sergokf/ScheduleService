@@ -38,5 +38,14 @@ class CRUDTeacher(CRUDBase[Teacher, TeacherCreate, TeacherUpdate]):
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_slug(self, db: AsyncSession, slug: str) -> Optional[Teacher]:
+        """Получить преподавателя по slug"""
+        query = select(self.model).where(
+            self.model.slug == slug,
+            self.model.is_deleted == False
+        )
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
 
 teacher = CRUDTeacher(Teacher)

@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, Relationship
 
 from app.models.base import BaseModel
@@ -13,6 +13,10 @@ class Teacher(BaseModel, table=True):
     phone: Optional[str] = Field(default=None, max_length=20)
     bio: Optional[str] = Field(default=None, max_length=1000)
     is_active: bool = Field(default=True)
+    slug: Optional[str] = Field(default=None, max_length=20, unique=True, description="Уникальный username/slug для учителя")
 
     # Связи
     time_slots: List["TimeSlot"] = Relationship(back_populates="teacher")
+
+if TYPE_CHECKING:
+    from app.models.time_slot import TimeSlot

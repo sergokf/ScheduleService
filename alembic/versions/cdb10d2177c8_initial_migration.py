@@ -40,6 +40,7 @@ def upgrade() -> None:
     sa.Column('phone', sa.String(), nullable=True),
     sa.Column('bio', sa.String(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('slug', sa.String(length=20), unique=True, nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )

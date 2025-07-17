@@ -1,5 +1,6 @@
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 
 from app.schemas.base import BaseResponse
 
@@ -11,6 +12,14 @@ class TeacherBase(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=20)
     bio: Optional[str] = Field(default=None, max_length=1000)
     is_active: bool = True
+    slug: str = Field(..., min_length=3, max_length=20, pattern=r'^[a-zA-Z0-9_-]+$', description="Уникальный username/slug для учителя")
+
+    @field_validator('slug')
+    @classmethod
+    def validate_slug(cls, v):
+        if not re.match(r'^[a-zA-Z0-9_-]{3,20}$', v):
+            raise ValueError('Slug должен содержать только латинские буквы, цифры, -, _ и быть длиной 3-20 символов')
+        return v
 
 
 class TeacherCreate(TeacherBase):
@@ -25,6 +34,14 @@ class TeacherUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     bio: Optional[str] = Field(None, max_length=1000)
     is_active: Optional[bool] = None
+    slug: Optional[str] = Field(None, min_length=3, max_length=20, pattern=r'^[a-zA-Z0-9_-]+$', description="Уникальный username/slug для учителя")
+
+    @field_validator('slug')
+    @classmethod
+    def validate_slug(cls, v):
+        if v is not None and not re.match(r'^[a-zA-Z0-9_-]{3,20}$', v):
+            raise ValueError('Slug должен содержать только латинские буквы, цифры, -, _ и быть длиной 3-20 символов')
+        return v
 
 
 class TeacherResponse(BaseResponse):
@@ -34,6 +51,7 @@ class TeacherResponse(BaseResponse):
     phone: Optional[str]
     bio: Optional[str]
     is_active: bool
+    slug: str
 
     class Config:
         from_attributes = True

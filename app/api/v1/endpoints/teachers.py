@@ -59,6 +59,10 @@ async def create_teacher(
     existing_teacher = await teacher.get_by_email(db, teacher_in.email)
     if existing_teacher:
         raise HTTPException(status_code=400, detail="Teacher with this email already exists")
+    # Проверяем, что slug уникален
+    existing_slug = await teacher.get_by_slug(db, teacher_in.slug)
+    if existing_slug:
+        raise HTTPException(status_code=400, detail="Teacher with this slug already exists")
 
     db_teacher = await teacher.create(db, teacher_in)
     return db_teacher
@@ -80,6 +84,11 @@ async def update_teacher(
         existing_teacher = await teacher.get_by_email(db, teacher_update.email)
         if existing_teacher:
             raise HTTPException(status_code=400, detail="Teacher with this email already exists")
+    # Проверяем slug на уникальность, если он изменяется
+    if teacher_update.slug and teacher_update.slug != db_teacher.slug:
+        existing_slug = await teacher.get_by_slug(db, teacher_update.slug)
+        if existing_slug:
+            raise HTTPException(status_code=400, detail="Teacher with this slug already exists")
 
     updated_teacher = await teacher.update(db, db_teacher, teacher_update)
     return updated_teacher
