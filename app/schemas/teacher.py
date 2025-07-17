@@ -65,6 +65,18 @@ class TeacherWithSlots(TeacherResponse):
         from_attributes = True
 
 
+class TeacherRegister(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    email: EmailStr
+    phone: Optional[str] = Field(default=None, max_length=20)
+    bio: Optional[str] = Field(default=None, max_length=1000)
+    slug: str = Field(..., min_length=3, max_length=20, pattern=r'^[a-zA-Z0-9_-]+$')
+    password: str = Field(min_length=6, max_length=128)
+
+class TeacherLogin(BaseModel):
+    slug_or_email: str = Field(..., description="Slug или email учителя")
+    password: str = Field(..., min_length=6, max_length=128)
+
 # Импорт нужно будет добавить в конец файла после определения всех схем
 from app.schemas.time_slot import TimeSlotResponse
 TeacherWithSlots.model_rebuild()

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_pagination_params
+from app.core.auth import student_required
 from app.crud import student
 from app.schemas.student import StudentCreate, StudentUpdate, StudentResponse, StudentWithBookings
 from app.schemas.base import PaginationParams, PaginatedResponse
@@ -23,6 +24,18 @@ async def get_students(
 
     result = await student.get_multi(db, pagination, filters)
     return result
+
+
+@router.get("/me", response_model=StudentResponse)
+async def get_current_student(
+    current=Depends(student_required),
+    db: AsyncSession = Depends(get_db)
+):
+    student_id = int(current["sub"])
+    db_student = await student.get(db, student_id)
+    if not db_student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return db_student
 
 
 @router.get("/{student_id}", response_model=StudentResponse)

@@ -14,6 +14,7 @@ class Teacher(BaseModel, table=True):
     bio: Optional[str] = Field(default=None, max_length=1000)
     is_active: bool = Field(default=True)
     slug: Optional[str] = Field(default=None, max_length=20, unique=True, description="Уникальный username/slug для учителя")
+    password_hash: Optional[str] = Field(default=None, max_length=128, description="Хеш пароля учителя")
 
     # Связи
     time_slots: List["TimeSlot"] = Relationship(back_populates="teacher")

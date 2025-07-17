@@ -6,6 +6,7 @@ from app.core.dependencies import get_db, get_pagination_params
 from app.crud import teacher
 from app.schemas.teacher import TeacherCreate, TeacherUpdate, TeacherResponse, TeacherWithSlots
 from app.schemas.base import PaginationParams, PaginatedResponse
+from app.core.auth import teacher_required
 
 router = APIRouter()
 
@@ -23,6 +24,18 @@ async def get_teachers(
 
     result = await teacher.get_multi(db, pagination, filters)
     return result
+
+
+@router.get("/me", response_model=TeacherResponse)
+async def get_my_profile(
+    current=Depends(teacher_required),
+    db: AsyncSession = Depends(get_db)
+):
+    teacher_id = int(current["sub"])
+    db_teacher = await teacher.get(db, teacher_id)
+    if not db_teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    return db_teacher
 
 
 @router.get("/{teacher_id}", response_model=TeacherResponse)
