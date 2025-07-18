@@ -18,6 +18,15 @@ class CRUDStudent(CRUDBase[Student, StudentCreate, StudentUpdate]):
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_slug(self, db: AsyncSession, slug: str) -> Optional[Student]:
+        """Получить студента по slug"""
+        query = select(self.model).where(
+            self.model.slug == slug,
+            self.model.is_deleted == False
+        )
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_active_students(self, db: AsyncSession) -> List[Student]:
         """Получить активных студентов"""
         query = select(self.model).where(

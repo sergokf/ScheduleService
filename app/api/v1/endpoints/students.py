@@ -72,6 +72,11 @@ async def create_student(
     existing_student = await student.get_by_email(db, student_in.email)
     if existing_student:
         raise HTTPException(status_code=400, detail="Student with this email already exists")
+    # Проверяем, что slug уникален
+    if student_in.slug:
+        existing_slug = await student.get_by_slug(db, student_in.slug)
+        if existing_slug:
+            raise HTTPException(status_code=400, detail="Student with this slug already exists")
 
     db_student = await student.create(db, student_in)
     return db_student
@@ -93,6 +98,11 @@ async def update_student(
         existing_student = await student.get_by_email(db, student_update.email)
         if existing_student:
             raise HTTPException(status_code=400, detail="Student with this email already exists")
+    # Проверяем slug на уникальность, если он изменяется
+    if student_update.slug and student_update.slug != db_student.slug:
+        existing_slug = await student.get_by_slug(db, student_update.slug)
+        if existing_slug:
+            raise HTTPException(status_code=400, detail="Student with this slug already exists")
 
     updated_student = await student.update(db, db_student, student_update)
     return updated_student
@@ -103,12 +113,14 @@ async def delete_student(
     student_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Удалить студента"""
+    """
+    Жёстко удалить студента из базы данных
+    """
     db_student = await student.get(db, student_id)
     if not db_student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    success = await student.delete(db, student_id)
+    success = await student.remove(db, student_id)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to delete student")
 

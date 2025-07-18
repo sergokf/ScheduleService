@@ -112,12 +112,14 @@ async def delete_teacher(
     teacher_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Удалить преподавателя"""
+    """
+    Жёстко удалить преподавателя из базы данных
+    """
     db_teacher = await teacher.get(db, teacher_id)
     if not db_teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
 
-    success = await teacher.delete(db, teacher_id)
+    success = await teacher.remove(db, teacher_id)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to delete teacher")
 

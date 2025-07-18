@@ -113,7 +113,9 @@ async def delete_slot(
     slot_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Удалить слот"""
+    """
+    Жёстко удалить слот из базы данных
+    """
     db_slot = await time_slot.get(db, slot_id)
     if not db_slot:
         raise HTTPException(status_code=404, detail="Slot not found")
@@ -122,7 +124,7 @@ async def delete_slot(
     if db_slot.current_bookings > 0:
         raise HTTPException(status_code=400, detail="Cannot delete slot with active bookings")
 
-    success = await time_slot.delete(db, slot_id)
+    success = await time_slot.remove(db, slot_id)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to delete slot")
 

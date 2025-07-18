@@ -163,11 +163,31 @@ uvicorn app.main:app --reload
 }
 ```
 
+#### Смена пароля (Change password)
+
+- **Для авторизованного пользователя:**
+- `POST /api/v1/auth/teacher/change-password` — смена пароля учителя
+- `POST /api/v1/auth/student/change-password` — смена пароля студента
+- Требуется авторизация (JWT)
+- В теле запроса (JSON):
+```json
+{
+  "old_password": "старый_пароль",
+  "new_password": "новый_пароль"
+}
+```
+- В ответе:
+```json
+{
+  "message": "Пароль успешно изменён"
+}
+```
+
 #### Использование токена
 
 - Для доступа к защищённым эндпоинтам (например, `/api/v1/teachers/me`, `/api/v1/students/me`) добавьте заголовок:
   - `Authorization: Bearer <ваш_JWT_токен>`
-- В Swagger UI (http://localhost:8000/docs) используйте кнопку **Authorize** и вставьте токен в формате `Bearer <JWT>`.
+- В Swagger UI (http://localhost:8000/docs) используйте кнопку **Authorize** и вставьте в поле только сам токен (без "Bearer "). Swagger сам добавит нужный префикс.
 - Токен действителен 30 минут (можно изменить в настройках).
 
 #### Пример работы через curl
@@ -181,6 +201,12 @@ curl -X POST http://localhost:8000/api/v1/auth/teacher/login \
 # Получение профиля
 curl -X GET http://localhost:8000/api/v1/teachers/me \
   -H "Authorization: Bearer <ваш_JWT_токен>"
+
+# Смена пароля
+curl -X POST http://localhost:8000/api/v1/auth/teacher/change-password \
+  -H "Authorization: Bearer <ваш_JWT_токен>" \
+  -H "Content-Type: application/json" \
+  -d '{"old_password": "password123", "new_password": "newpass456"}'
 ```
 
 #### Особенности

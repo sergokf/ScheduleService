@@ -10,6 +10,7 @@ class StudentBase(BaseModel):
     email: EmailStr
     phone: Optional[str] = Field(default=None, max_length=20)
     is_active: bool = True
+    slug: Optional[str] = Field(None, min_length=3, max_length=20, pattern=r'^[a-zA-Z0-9_-]+$', description="Уникальный username/slug для студента")
 
 
 class StudentCreate(StudentBase):
@@ -23,6 +24,7 @@ class StudentUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, max_length=20)
     is_active: Optional[bool] = None
+    slug: Optional[str] = Field(None, min_length=3, max_length=20, pattern=r'^[a-zA-Z0-9_-]+$', description="Уникальный username/slug для студента")
 
 
 class StudentResponse(BaseResponse):

@@ -5,8 +5,11 @@ from app.schemas.teacher import TeacherRegister, TeacherLogin
 from app.schemas.student import StudentRegister, StudentLogin
 from app.models.teacher import Teacher
 from app.models.student import Student
-from app.core.auth import hash_password, verify_password, create_access_token
-from sqlalchemy import select
+from app.core.auth import hash_password, verify_password, create_access_token, teacher_required, student_required
+from sqlalchemy import select, and_
+from app.crud.teacher import teacher as teacher_crud
+from app.crud.student import student as student_crud
+from sqlalchemy.sql.expression import false as sa_false
 
 router = APIRouter()
 
@@ -20,10 +23,14 @@ def get_teacher_by_slug_or_email(db: AsyncSession, slug_or_email: str):
 
 @router.post('/teacher/register')
 async def register_teacher(data: TeacherRegister, db: AsyncSession = Depends(get_db)):
-    # Проверка уникальности email и slug
-    existing = await db.execute(select(Teacher).where((Teacher.email == data.email) | (Teacher.slug == data.slug), Teacher.is_deleted == False))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Учитель с таким email или slug уже существует")
+    # Проверка уникальности email
+    existing_email = await db.execute(select(Teacher).where((Teacher.email == data.email) & (Teacher.is_deleted == False)))
+    if existing_email.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Учитель с таким email уже существует")
+    # Проверка уникальности slug
+    existing_slug = await db.execute(select(Teacher).where((Teacher.slug == data.slug) & (Teacher.is_deleted == False)))
+    if existing_slug.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Учитель с таким slug уже существует")
     teacher = Teacher(
         name=data.name,
         email=data.email,
@@ -54,9 +61,12 @@ async def login_teacher(data: TeacherLogin, db: AsyncSession = Depends(get_db)):
 # Регистрация студента
 @router.post('/student/register')
 async def register_student(data: StudentRegister, db: AsyncSession = Depends(get_db)):
-    existing = await db.execute(select(Student).where((Student.email == data.email) | (Student.slug == data.slug), Student.is_deleted == False))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Студент с таким email или slug уже существует")
+    existing_email = await db.execute(select(Student).where((Student.email == data.email) & (Student.is_deleted == False)))
+    if existing_email.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Студент с таким email уже существует")
+    existing_slug = await db.execute(select(Student).where((Student.slug == data.slug) & (Student.is_deleted == False)))
+    if existing_slug.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Студент с таким slug уже существует")
     student = Student(
         name=data.name,
         email=data.email,
@@ -81,4 +91,34 @@ async def login_student(data: StudentLogin, db: AsyncSession = Depends(get_db)):
     if not student or not student.password_hash or not verify_password(data.password, student.password_hash):
         raise HTTPException(status_code=401, detail="Неверные данные для входа")
     token = create_access_token({"sub": str(student.id), "role": "student", "slug": student.slug, "email": student.email})
-    return {"access_token": token, "token_type": "bearer"} 
+    return {"access_token": token, "token_type": "bearer"}
+
+@router.post("/teacher/change-password")
+async def change_teacher_password(
+    old_password: str,
+    new_password: str,
+    current=Depends(teacher_required),
+    db: AsyncSession = Depends(get_db)
+):
+    teacher_id = int(current["sub"])
+    db_teacher = await teacher_crud.get(db, teacher_id)
+    if not db_teacher or not db_teacher.password_hash or not verify_password(old_password, db_teacher.password_hash):
+        raise HTTPException(status_code=400, detail="Старый пароль неверен")
+    db_teacher.password_hash = hash_password(new_password)
+    await db.commit()
+    return {"message": "Пароль успешно изменён"}
+
+@router.post("/student/change-password")
+async def change_student_password(
+    old_password: str,
+    new_password: str,
+    current=Depends(student_required),
+    db: AsyncSession = Depends(get_db)
+):
+    student_id = int(current["sub"])
+    db_student = await student_crud.get(db, student_id)
+    if not db_student or not db_student.password_hash or not verify_password(old_password, db_student.password_hash):
+        raise HTTPException(status_code=400, detail="Старый пароль неверен")
+    db_student.password_hash = hash_password(new_password)
+    await db.commit()
+    return {"message": "Пароль успешно изменён"} 
